@@ -1,3 +1,6 @@
+% The BLR LU decompositions of system matrices are not part of the repository.
+% They can be generate by running the script computeBLRLU.m
+
 clc; clear all; close all;
 
 addpath('..\functions'); 

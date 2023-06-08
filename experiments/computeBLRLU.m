@@ -1,5 +1,5 @@
-% script for computing the BLR LU decompositions of coarsest-level matrices
-% used in the blr solver
+% Script for computing the BLR LU decompositions of system matrices
+% used in the blr solver.
 %
 % 
 % modification of the code at
