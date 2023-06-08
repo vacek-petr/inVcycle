@@ -11,8 +11,6 @@ from scipy import sparse
 import scipy.io
 from dolfin import *
 from mshr import *
-from matplotlib import pyplot
-import dolfin.common.plotting as fenicsplot
 
 
 # peak 2D BJR1995
