@@ -4,7 +4,7 @@ addpath('..\functions');
 addpath('..\classes');
 addpath('..\data\Poisson\')
 addpath('..\data\jump-1024\')
-load('Poisson.mat','mh'); % or load('Poisson.mat','mh');
+load('Poisson.mat','mh'); % or load('jump-1024.mat','mh');
 
 mh.selectLevels(numberOfLevels=6,from=2);  % numberOfLevels= 6 or 3 ,from= 2 or 5
 
