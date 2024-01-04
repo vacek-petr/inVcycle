@@ -58,6 +58,7 @@ for j in range(0,nlevel):
 
     dx = Measure('dx', domain=mesh, subdomain_data=cf)
     
+    # plot subdomains
     plot(cf)
     plt.show()
     fileName = "subdomains_" + str(j) + ".png"
