@@ -3,7 +3,6 @@ import petsc4py
 import time
 petsc4py.init(sys.argv)
 from petsc4py import PETSc
-print = PETSc.Sys.Print
 opts = PETSc.Options()
 
 import numpy as np
@@ -11,28 +10,29 @@ from scipy import sparse
 import scipy.io
 from dolfin import *
 from mshr import *
+import matplotlib.pyplot as plt
 
+# right hand side
+f = Expression("1.0", degree=1)
 
-# peak 2D BJR1995
-uex = Expression("10*sin(2*pi*x[0])*sin(pi*x[1])*exp(pow((x[0]-frac34),2) + pow((x[1]-frac34),2))", degree=4, pi=np.pi, frac34 = 0.75)
-grad_uex = Expression( ["10*exp(pow((x[0] - frac34),2) + pow((x[1] - frac34),2))*sin(2*pi*x[0])*sin(pi*x[1])*(2*x[0] -frac32) + 20*pi*exp(pow((x[0] - frac34),2) + pow((x[1] - frac34),2))*cos(2*pi*x[0])*sin(pi*x[1])","10*exp(pow((x[0] - frac34),2) + pow((x[1] - frac34),2))*sin(pi*x[1])*sin(2*pi*x[0])*(2*x[1] -frac32) + 10*pi*exp(pow((x[0] - frac34),2) + pow((x[1] - frac34),2))*cos(pi*x[1])*sin(2*pi*x[0])"], degree=4, pi=np.pi, frac34=0.75,frac32 = 1.5)
-f = Expression("50*pi*pi*exp(pow((x[0] - frac34),2) + pow((x[1] - frac34),2))*sin(pi*x[1])*sin(2*pi*x[0]) - 10*exp(pow((x[0] - frac34),2) + pow((x[1] - frac34),2))*sin(pi*x[1])*sin(2*pi*x[0])*pow((2*x[1] -frac32),2) - 10*exp(pow((x[0] - frac34),2) + pow((x[1] - frac34),2))*sin(pi*x[1])*sin(2*pi*x[0])*pow((2*x[0] -frac32),2) - 40*exp(pow((x[0] - frac34),2) + pow((x[1] - frac34),2))*sin(pi*x[1])*sin(2*pi*x[0]) - 20*pi*exp(pow((x[0] - frac34),2) + pow((x[1] - frac34),2))*cos(pi*x[1])*sin(2*pi*x[0])*(2*x[1] -frac32) - 40*pi*exp(pow((x[0] - frac34),2) + pow((x[1] - frac34),2))*cos(2*pi*x[0])*sin(pi*x[1])*(2*x[0] -frac32)",degree=4, pi=np.pi, frac34=0.75,frac32=1.5)
+nlevel = 7 # number of levels
+n = 20 # size coarsest level (points on a line)
 
-
-
-nlevel = 8 # number of levels
-n = 11 # size coarsest level (points on a line)
-
-matricesA = np.empty((nlevel,), dtype=np.object)
-vectorsF = np.empty((nlevel,), dtype=np.object)
-matricesP = np.empty((nlevel-1,), dtype=np.object)
-vectorsBoundaryNodes = np.empty((nlevel,), dtype=np.object)
+matricesA = np.empty((nlevel,), dtype=object)
+vectorsF = np.empty((nlevel,), dtype=object)
+matricesP = np.empty((nlevel-1,), dtype=object)
+vectorsBoundaryNodes = np.empty((nlevel,), dtype=object)
 
 def boundary(x, on_boundary):
     return on_boundary
 
+
 def operator(u,v):
-    a = inner(grad(u), grad(v))*dx
+    # Poisson problem 
+    a = inner(Constant(1.0)*grad(u), grad(v))*dx(1) + inner(Constant(1.0)*grad(u), grad(v))*dx(3) + inner(Constant(1.0)*grad(u), grad(v))*dx(2) + inner(Constant(1.0)*grad(u), grad(v))*dx(4)
+    
+    # jump-1024 problem
+    # a = inner(Constant(1024.0)*grad(u), grad(v))*dx(1) + inner(Constant(1024.0)*grad(u), grad(v))*dx(3) + inner(Constant(1.0)*grad(u), grad(v))*dx(2) + inner(Constant(1.0)*grad(u), grad(v))*dx(4)
     return a
 
 def rightside(f,v):
@@ -43,7 +43,32 @@ def rightside(f,v):
 tic = time.time()
 
 for j in range(0,nlevel):
+
     mesh = UnitSquareMesh(n*(2**(j)),n*(2**(j)))
+
+    leftBottomSubdomain = AutoSubDomain(lambda x, on_exterior: (x[0] <= 0.5)&(x[1] <= 0.5))
+    leftTopSubdomain = AutoSubDomain(lambda x, on_exterior: (x[0] <= 0.5)&(x[1] >= 0.5))
+    rightBottomSubdomain = AutoSubDomain(lambda x, on_exterior: (x[0] >= 0.5)&(x[1] <= 0.5))
+    rightTopSubdomain = AutoSubDomain(lambda x, on_exterior: (x[0] >= 0.5)&(x[1] >= 0.5))
+    cf = MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
+    rightTopSubdomain.mark(cf, 1)
+    leftTopSubdomain.mark(cf, 2)
+    leftBottomSubdomain.mark(cf, 3)
+    rightBottomSubdomain.mark(cf, 4)
+
+    dx = Measure('dx', domain=mesh, subdomain_data=cf)
+    
+    plot(cf)
+    plt.show()
+    fileName = "subdomains_" + str(j) + ".png"
+    plt.savefig(fileName)
+    
+
+    # plot meshes
+    plot(mesh)
+    plt.show()
+    fileName = "mesh_" + str(j) + ".png"
+    plt.savefig(fileName)
     
     P1 = FiniteElement("Lagrange", mesh.ufl_cell(), 1)
     VFine = FunctionSpace(mesh, P1)
@@ -57,16 +82,18 @@ for j in range(0,nlevel):
     boundaryNodes.sort()
     vectorsBoundaryNodes[j] = boundaryNodes
 
+
     A, F = assemble_system(operator(u,v),rightside(f,v),bc)
     
+    # solve
     tic2 = time.time()
     u = Function(VFine)
     solve(A, u.vector(),F,"cg")
+    plot(u)
+    plt.show()
+    fileName = "solutution_" + str(j) + ".png"
+    plt.savefig(fileName)
 
-    discretizetionErrorEnergyNorm = sqrt(assemble(inner(grad(u)-grad_uex,grad(u)-grad_uex)*dx(mesh)))
-    print("Energy norm of discretization error = {0:16.8e}".format(discretizetionErrorEnergyNorm))
-    print("Solution time " + str(time.time()-tic2))
-    print("-------------------------------------------")
 
     APetsc = as_backend_type(A).mat()
     indptr, indices, data = APetsc.getValuesCSR()
@@ -93,3 +120,4 @@ scipy.io.savemat("BN.mat", {"BN": vectorsBoundaryNodes})
 toc = time.time()
 
 print("Total time", toc-tic)
+print("Sucess!")
