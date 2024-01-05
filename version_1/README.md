@@ -1,5 +1,5 @@
 # inVcycle
-Code for reproducing results in P. Vacek, E. C. Carson and K. M. Soodhalter, The effect of approximate coarsest-level solves on the convergence of multigrid V-cycle methods, https://arxiv.org/abs/2306.06182 .
+Code for reproducing results in P. Vacek, E. C. Carson and K. M. Soodhalter, The effect of approximate coarsest-level solves on the convergence of multigrid V-cycle methods, version 1, https://arxiv.org/abs/2306.06182v1 .
 MATLAB R2023a is used.
 
 * **experiments/variousRelativeResidualTolerances.m**: generates data included in Figure 1 of the paper.
